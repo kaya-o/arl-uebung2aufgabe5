@@ -1,14 +1,12 @@
 import sys
 import gym_crawlingrobot
-import gymnasium
+import gymnasium as gym
 import pygame
 import pickle
 import numpy as np
-import random
 
-#SEED = 42
-#np.random.seed(SEED)
-#random.seed(SEED)
+def obs_to_number(obs, obs_max):
+    return int(obs[0] * obs_max + obs[1])
 
 def obs_to_number(obs, obs_max):
     return int(obs[0] * obs_max + obs[1])
@@ -23,13 +21,15 @@ def vi_agent(R, Transitions, V, obs_max, env, learn=True, render=False,
     print(f"R.shape={R.shape}, Transitions.shape={Transitions.shape}, V.shape={V.shape}")
     np.set_printoptions(threshold=sys.maxsize)
 
-    if learn:
-        R.fill(0)
-        Transitions.fill(-1)
-        V.fill(0)
-
     # while steps < total_steps:
     for episode in range(episodes):
+
+        if learn:
+            R.fill(0)
+            Transitions.fill(-1)
+            V.fill(0)
+
+
         obs, _ = env.reset()
         state = obs_to_number(obs.tolist(), obs_max)
         done = False
@@ -100,7 +100,7 @@ def vi_agent(R, Transitions, V, obs_max, env, learn=True, render=False,
             #     break
 
         print(f"Episode={episode+1} took {step} steps => cumulative reward: {cum_reward:.2f}")
-    
+
     if render:
         while True:
             for event in pygame.event.get():
@@ -114,7 +114,7 @@ def vi_agent(R, Transitions, V, obs_max, env, learn=True, render=False,
     return
 
 # === Setup Environment ===
-env = gymnasium.make('crawlingrobot-discrete-v1', rotation_angles=5, goal_distance=10000)
+env = gym.make('crawlingrobot-discrete-v1', rotation_angles=5, goal_distance=10000)
 obs_max = int(env.observation_space.high[0] + 1)
 
 num_states = obs_max ** len(env.observation_space.high)
@@ -128,18 +128,18 @@ vi_filename = "VI_model.pkl"
 ### train
 
 vi_agent(R=R, Transitions=Transitions, V=V, obs_max=obs_max, env=env,
-         gamma=0.95, epsilon=0.05, alpha=0.5, episodes=5, render=False, learn=True)
+         gamma=0.5, epsilon=0.1, alpha=0.5, episodes=5, render=False, learn=True)
 
 pickle.dump((R, Transitions, V), open(vi_filename, "wb"))
 print("Wrote VI model to file:", vi_filename)
 
+pygame.quit()
 
 print("Loading VI model from file:", vi_filename)
 R, Transitions, V = pickle.load(open(vi_filename, "rb"))
 
-### render
-env = gymnasium.make('crawlingrobot-discrete-v1', rotation_angles=5,
+env = gym.make('crawlingrobot-discrete-v1', rotation_angles=5,
                window_size=(640, 480), plot_steps_per_episode=True, goal_distance=10000)
 
 vi_agent(R=R, Transitions=Transitions, V=V, obs_max=obs_max, env=env,
-         gamma=0.95, epsilon=0.05, alpha=0.5, episodes=1, render=True, learn=False)
+         gamma=0.5, epsilon=0.0, alpha=0.5, episodes=1, render=True, learn=False)
